@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "{[()()]}\n",
+    "expected": "YES\n"
+  },
+  {
+    "stdin": "([)]\n",
+    "expected": "NO\n"
+  }
+]

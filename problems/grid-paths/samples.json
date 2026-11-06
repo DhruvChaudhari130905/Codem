@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "3 3\n...\n.#.\n...\n",
+    "expected": "2\n"
+  },
+  {
+    "stdin": "2 2\n.#\n#.\n",
+    "expected": "0\n"
+  }
+]

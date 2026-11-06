@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "Hello, World!\n",
+    "expected": "3\n"
+  },
+  {
+    "stdin": "rhythm\n",
+    "expected": "0\n"
+  }
+]

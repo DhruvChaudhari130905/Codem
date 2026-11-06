@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "abcabcbb\n",
+    "expected": "3\n"
+  },
+  {
+    "stdin": "bbbbb\n",
+    "expected": "1\n"
+  }
+]

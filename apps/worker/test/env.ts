@@ -1,0 +1,5 @@
+process.env.NODE_ENV = 'test'
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgresql://codem:codem@127.0.0.1:5432/codem_test'
+process.env.REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6379/1'
+process.env.SOCKET_IO_KEY = 'codem-test-io'
+process.env.JUDGE0_URL ??= 'http://127.0.0.1:2358'

@@ -1,0 +1,39 @@
+{
+  "name": "server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p .",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@codem/shared": "workspace:*",
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/cors": "^11.4.1",
+    "@fastify/oauth2": "^8.3.2",
+    "@prisma/client": "^6.19.3",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "argon2": "^0.45.2",
+    "bullmq": "^6.7.1",
+    "fastify": "^5",
+    "ioredis": "^6.0.0",
+    "socket.io": "^4.8.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
+    "prisma": "^6.19.3",
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

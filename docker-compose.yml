@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: codem
+      POSTGRES_PASSWORD: codem
+      POSTGRES_DB: codem
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codem"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # Judge0 (sandboxed execution) — reachable only from localhost / the worker.
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    volumes: ["./judge0.conf:/judge0.conf:ro"]
+    ports: ["127.0.0.1:2358:2358"]
+    privileged: true
+    depends_on: [judge0-db, judge0-redis]
+    restart: unless-stopped
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    command: ["./scripts/workers"]
+    volumes: ["./judge0.conf:/judge0.conf:ro"]
+    privileged: true
+    depends_on: [judge0-db, judge0-redis]
+    restart: unless-stopped
+
+  judge0-db:
+    image: postgres:16
+    env_file: judge0.conf
+    volumes: [judge0pg:/var/lib/postgresql/data]
+    restart: unless-stopped
+
+  judge0-redis:
+    image: redis:7
+    command: ["bash", "-c", "docker-entrypoint.sh --appendonly no --requirepass \"$$REDIS_PASSWORD\""]
+    env_file: judge0.conf
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  judge0pg:

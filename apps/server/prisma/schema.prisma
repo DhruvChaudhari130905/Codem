@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FriendshipStatus {
+  pending
+  accepted
+}
+
+enum ChatKind {
+  direct
+  group
+}
+
+enum MemberRole {
+  admin
+  member
+}
+
+enum MessageKind {
+  text
+  match_invite
+  match_live
+  match_result
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum MatchMode {
+  coding
+  prompting
+}
+
+enum MatchStatus {
+  waiting_for_players
+  countdown
+  live
+  judging
+  finished
+  cancelled
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String?  @unique
+  email        String   @unique
+  passwordHash String?
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+
+  sessions    Session[]
+  sentReqs    Friendship[]  @relation("requester")
+  recvReqs    Friendship[]  @relation("addressee")
+  memberships ChatMember[]
+  messages    Message[]
+  hostedMatch Match[]
+  plays       MatchPlayer[]
+  problems    Problem[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(pending)
+  createdAt   DateTime         @default(now())
+  requester   User             @relation("requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+}
+
+model Chat {
+  id          String   @id @default(cuid())
+  kind        ChatKind
+  name        String?
+  inviteCode  String?  @unique
+  createdById String
+  /// For direct chats: "<smallerUserId>:<largerUserId>" so a pair has exactly one chat.
+  directKey   String?  @unique
+  createdAt   DateTime @default(now())
+
+  members  ChatMember[]
+  messages Message[]
+  matches  Match[]
+}
+
+model ChatMember {
+  chatId     String
+  userId     String
+  role       MemberRole @default(member)
+  lastReadAt DateTime   @default(now())
+  chat       Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  chatId    String
+  senderId  String?
+  kind      MessageKind @default(text)
+  body      String
+  matchId   String?
+  createdAt DateTime    @default(now())
+  chat      Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User?       @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([chatId, createdAt])
+}
+
+model Problem {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  difficulty  Difficulty
+  statementMd String
+  samples     Json
+  hidden      Json
+  cpuSec      Int        @default(10)
+  memMb       Int        @default(512)
+  isCustom    Boolean    @default(false)
+  createdById String?
+  createdBy   User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  matches     Match[]
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  chatId       String
+  hostId       String
+  mode         MatchMode
+  problemId    String
+  language     String?
+  timeLimitSec Int
+  status       MatchStatus @default(waiting_for_players)
+  joinDeadline DateTime?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime    @default(now())
+  chat         Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  host         User        @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  problem      Problem     @relation(fields: [problemId], references: [id])
+  players      MatchPlayer[]
+  turns        AgentTurn[]
+
+  @@index([status])
+}
+
+model MatchPlayer {
+  matchId     String
+  userId      String
+  joinedAt    DateTime  @default(now())
+  submittedAt DateTime?
+  language    String?
+  code        String?
+  testsPassed Int?
+  testsTotal  Int?
+  judgedAt    DateTime?
+  aiScore     Float?
+  report      Json?
+  promptsUsed Int       @default(0)
+  tokensUsed  Int       @default(0)
+  /// Prompting round: the agent's current files.
+  files       Json?
+  score       Json?
+  match       Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, userId])
+}
+
+model AgentTurn {
+  id         String   @id @default(cuid())
+  matchId    String
+  userId     String
+  index      Int
+  prompt     String
+  transcript Json
+  filesAfter Json
+  tokens     Int
+  createdAt  DateTime @default(now())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId, index])
+}

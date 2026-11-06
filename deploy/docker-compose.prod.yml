@@ -1,0 +1,107 @@
+# Production stack for one Linux VM (cgroup v1 host for Judge0; see README).
+# Run from the repo root: docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
+name: codem
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://codem:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/codem
+  REDIS_URL: redis://redis:6379
+  JUDGE0_URL: http://judge0-server:2358
+  SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  WEB_URL: https://${DOMAIN:?set DOMAIN}
+  API_URL: https://api.${DOMAIN}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+  # Caddy is the one proxy in front of the server.
+  TRUST_PROXY_HOPS: "1"
+
+services:
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment: { DOMAIN: "${DOMAIN}" }
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    networks: [edge]
+    depends_on: [web, server]
+    restart: unless-stopped
+
+  web:
+    build: { context: .., target: web, args: { NEXT_PUBLIC_API_URL: "https://api.${DOMAIN}" } }
+    networks: [edge]
+    restart: unless-stopped
+
+  server:
+    build: { context: .., target: server }
+    environment: *app-env
+    networks: [edge, internal]
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  worker:
+    build: { context: .., target: worker }
+    environment: *app-env
+    networks: [internal]
+    depends_on: [postgres, redis, judge0-server]
+    restart: unless-stopped
+    deploy: { replicas: 1 }
+
+  postgres:
+    image: postgres:16
+    environment: { POSTGRES_USER: codem, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: codem }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [internal]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    networks: [internal]
+    restart: unless-stopped
+
+  # Judge0: internal network only. Never publish port 2358.
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    volumes: ["../judge0.conf:/judge0.conf:ro"]
+    privileged: true
+    networks: [internal]
+    depends_on: [judge0-db, judge0-redis]
+    restart: unless-stopped
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    command: ["./scripts/workers"]
+    volumes: ["../judge0.conf:/judge0.conf:ro"]
+    privileged: true
+    networks: [internal]
+    depends_on: [judge0-db, judge0-redis]
+    restart: unless-stopped
+
+  judge0-db:
+    image: postgres:16
+    env_file: ../judge0.conf
+    volumes: [judge0pg:/var/lib/postgresql/data]
+    networks: [internal]
+    restart: unless-stopped
+
+  judge0-redis:
+    image: redis:7
+    command: ["bash", "-c", "docker-entrypoint.sh --appendonly no --requirepass \"$$REDIS_PASSWORD\""]
+    env_file: ../judge0.conf
+    networks: [internal]
+    restart: unless-stopped
+
+networks:
+  edge:
+  internal:
+    internal: true
+
+volumes:
+  caddy-data:
+  pgdata:
+  redisdata:
+  judge0pg:

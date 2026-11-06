@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "A man, a plan, a canal: Panama\n",
+    "expected": "YES\n"
+  },
+  {
+    "stdin": "codem\n",
+    "expected": "NO\n"
+  }
+]

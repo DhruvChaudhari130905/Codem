@@ -1,0 +1,10 @@
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+api.{$DOMAIN} {
+	encode zstd gzip
+	# HTTP API and Socket.IO (WebSocket upgrade is proxied automatically).
+	reverse_proxy server:4000
+}

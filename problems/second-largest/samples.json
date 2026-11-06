@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "5\n4 9 9 2 7\n",
+    "expected": "7\n"
+  },
+  {
+    "stdin": "3\n5 5 5\n",
+    "expected": "NONE\n"
+  }
+]

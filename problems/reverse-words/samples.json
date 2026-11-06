@@ -1,0 +1,10 @@
+[
+  {
+    "stdin": "the quick brown fox\n",
+    "expected": "fox brown quick the\n"
+  },
+  {
+    "stdin": "codem\n",
+    "expected": "codem\n"
+  }
+]

@@ -1,0 +1,10 @@
+.env
+node_modules/
+.superpowers/
+.next/
+dist/
+coverage/
+test-results/
+playwright-report/
+apps/web/public/monaco/
+*.tsbuildinfo

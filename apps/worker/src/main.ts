@@ -10,6 +10,7 @@ import { processJudge } from './jobs/judge.js'
 import { processRun } from './jobs/run.js'
 import { anthropicClient } from './ai/client.js'
 import { fakeClient } from './ai/fake.js'
+import { openAiClient } from './ai/openai.js'
 import { processAgentTurn } from './jobs/agentTurn.js'
 import { processReview } from './jobs/review.js'
 
@@ -18,7 +19,7 @@ const redis = new Redis(env.redisUrl)
 const emit = createEmit(redis)
 const publish = createPublish(redis)
 const executor = new Judge0Executor(env.judge0Url)
-const client = process.env.AI_FAKE === '1' ? fakeClient : anthropicClient
+const client = process.env.AI_FAKE === '1' ? fakeClient : env.aiProvider === 'openai' ? openAiClient(env.openAi) : anthropicClient
 const aiQueue = new Queue(AI_QUEUE, { connection, defaultJobOptions: { removeOnComplete: 1000, removeOnFail: 5000 } })
 const enqueueReview = async (j: ReviewJob) => {
   await aiQueue.add('review', j, { jobId: `review-${j.matchId}-${j.userId}`, attempts: 3, backoff: { type: 'exponential', delay: 2000 } })
@@ -48,7 +49,7 @@ const ai = new Worker(
 ai.on('failed', (job, err) => console.error(`ai job ${job?.name} ${job?.id} failed`, err))
 
 const health = createServer((_, res) => res.end('ok')).listen(env.port, '127.0.0.1')
-console.log(`worker ready: concurrency ${env.concurrency}, judge0 ${env.judge0Url}, ai ${process.env.AI_FAKE === '1' ? 'fake' : 'claude'}`)
+console.log(`worker ready: concurrency ${env.concurrency}, judge0 ${env.judge0Url}, ai ${process.env.AI_FAKE === '1' ? 'fake' : env.aiProvider === 'openai' ? `openai-compatible ${env.openAi.model}` : 'claude'}`)
 
 async function shutdown() {
   await Promise.allSettled([exec.close(), ai.close(), aiQueue.close()])
